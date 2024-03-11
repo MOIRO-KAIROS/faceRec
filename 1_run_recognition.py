@@ -73,7 +73,7 @@ if __name__ == '__main__':
             frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
             pil_im = Image.fromarray(frame).convert('RGB')
 
-            aligned_rgb_img, bboxes = align.get_aligned_face_webcam('', pil_im)
+            aligned_rgb_img, bboxes = align.get_aligned_face_for_webcam('', pil_im)
             bboxes = [[int(xy) for (xy) in bbox] for bbox in bboxes]
             face_names = []
             for img in aligned_rgb_img:
