@@ -5,7 +5,7 @@ from face_alignment import align
 import numpy as np
 import cv2
 from PIL import Image
-
+import argparse
 
 adaface_models = {
     'ir_50':"pretrained/adaface_ir50_ms1mv2.ckpt",
@@ -50,6 +50,10 @@ def compare_faces(known_face_encodings, face_encoding_to_check, tolerance=0.6):
     return matches
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--thresh', nargs='+', type=str, default=1., help='unknown confidence .6 ~ .9')
+    parser.add_argument('--max_obj', type=int, default=6, help='detect 가능한 최대 얼굴의 개수')
+    opt = parser.parse_args()
 
     model = load_pretrained_model('ir_50')
     # 데이터 로드
@@ -73,7 +77,7 @@ if __name__ == '__main__':
             frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
             pil_im = Image.fromarray(frame).convert('RGB')
 
-            aligned_rgb_img, bboxes = align.get_aligned_face_for_webcam('', pil_im)
+            aligned_rgb_img, bboxes = align.get_aligned_face_for_webcam('', pil_im, opt.max_obj)
             bboxes = [[int(xy) for (xy) in bbox] for bbox in bboxes]
             face_names = []
             for img in aligned_rgb_img:

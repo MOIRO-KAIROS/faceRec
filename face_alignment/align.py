@@ -35,7 +35,7 @@ def get_aligned_face(image_path, rgb_pil_image=None):
     return face
 
 
-def get_aligned_face_for_webcam(image_path, rgb_pil_image=None):
+def get_aligned_face_for_webcam(image_path, rgb_pil_image=None, max_obj=6):
     if rgb_pil_image is None:
         img = Image.open(image_path).convert('RGB')
     else:
@@ -43,7 +43,7 @@ def get_aligned_face_for_webcam(image_path, rgb_pil_image=None):
         img = rgb_pil_image
     # find face
     try:
-        bboxes, faces = mtcnn_model.align_multi(img, limit=2)
+        bboxes, faces = mtcnn_model.align_multi(img, limit=max_obj)
         # for face in faces:
         #     face.show()
     except Exception as e:
