@@ -56,7 +56,7 @@ if __name__ == '__main__':
     model = load_pretrained_model('ir_50')
     feature, norm = model(torch.randn(2,3,112,112))
 
-    test_image_path = 'face_database/test'
+    test_image_path = 'face_dataset/test'
     f, i = store_embeddings_to_db(test_image_path)
     # print(f)
     # print(i)
