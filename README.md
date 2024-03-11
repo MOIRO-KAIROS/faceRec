@@ -71,6 +71,21 @@ conda list | grep torch
 > torchvision               0.17.1+cu118             pypi_0    pypi
 
 
+## RUN *** 전에 할 것
+
+```pretrained``` 폴더 생성 후, weight(.ckpt) 다운로드
+- 다운로드 (링크 클릭)
+    | Arch | Dataset    | Link                                                                                         |
+    |------|------------|----------------------------------------------------------------------------------------------|
+    | R50  | MS1MV2     | [gdrive](https://drive.google.com/file/d/1eUaSHG4pGlIZK7hBkqjyp2fc2epKoBvI/view?usp=sharing) |
+
+- 파일 구조
+    ```
+    pretrained
+        |
+        |_____ adaface_ir50_ms1mv2.ckpt
+    ```
+
 ## Run Inference
 ```
 python inference.py
@@ -87,6 +102,12 @@ python inference.py
 ## Run Demo File (.mp4)
 
 1. video/iAm.zip 압축풀기 > iAm.mp4
+    - 파일 구조
+    ```
+    video
+      |
+      |_____ iAm.mp4
+    ```
 2. ```python3 0_store_embedding.py```
 3. ```python3 2_test_recognition.py``` # mp4에 대한 face Recognition 수행
     ```
