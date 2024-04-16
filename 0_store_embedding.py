@@ -5,8 +5,10 @@ from face_alignment import align
 import numpy as np
 
 
+sys_path = "src/faceRec"
+
 adaface_models = {
-    'ir_50':"pretrained/adaface_ir50_ms1mv2.ckpt",
+    'ir_50': os.path.join(sys_path, "pretrained/adaface_ir50_ms1mv2.ckpt"),
 }
 
 def load_pretrained_model(architecture='ir_50'):
@@ -46,8 +48,10 @@ def store_embeddings_to_db(folder):
         os.makedirs('embed')
 
     # Embeddings와 passage_ids를 저장
-    torch.save(features, 'embed/features.pt')
-    torch.save(ids, 'embed/ids.pt')
+    features = torch.squeeze(torch.stack(features), dim=1)
+    # print(features.shape)
+    torch.save(features, os.path.join(sys_path, 'embed/features.pt'))
+    torch.save(ids, os.path.join(sys_path, 'embed/ids.pt'))
 
     return features, ids
 
@@ -56,7 +60,7 @@ if __name__ == '__main__':
     model = load_pretrained_model('ir_50')
     feature, norm = model(torch.randn(2,3,112,112))
 
-    test_image_path = 'face_dataset/test'
+    test_image_path = os.path.join(sys_path, 'face_dataset/test')
     f, i = store_embeddings_to_db(test_image_path)
     # print(f)
     # print(i)
