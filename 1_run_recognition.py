@@ -55,7 +55,7 @@ if __name__ == '__main__':
         print("Error: Face database not found")
         sys.exit(1)
 
-    video_capture = cv2.VideoCapture(4) # 4, 6
+    video_capture = cv2.VideoCapture(0) # 4, 6
     while True:
         face_encodings = []
         # Grab a single frame of video
@@ -80,7 +80,7 @@ if __name__ == '__main__':
             continue
         
         ## 2. 얼굴 유사도 측정 with tensor
-        start_time = time.time() # 연산에 대한 실행 시간(start) check
+        # start_time = time.time() # 연산에 대한 실행 시간(start) check
         face_encodings = torch.squeeze(torch.stack(face_encodings), dim=1).to(device) # torch.squeeze(torch.stack(face_encodings), dim=1) # torch.squeeze()
         with torch.no_grad():
             face_distances = torch.matmul(face_encodings, known_face_encodings.T)
@@ -88,8 +88,8 @@ if __name__ == '__main__':
         thresh = opt.thresh
         face_names = ["unknown" if torch.any(face_distances[i][idx] < thresh) else known_face_names[idx] for i, idx in enumerate(best_match_index)]
         # face_names = [known_face_names[idx] for idx in best_match_index] # threshold 없는 경우 ('unkown' 처리 안한 경우)
-        end_time = time.time() # 연산에 대한 실행 시간(end) check
-        print("Execution Time:", (end_time - start_time), "sec") # 실행 시간 0.0003 ~
+        # end_time = time.time() # 연산에 대한 실행 시간(end) check
+        # print("Execution Time:", (end_time - start_time), "sec") # 실행 시간 0.0003 ~
         
 
         ## 3. bbox 시각화
