@@ -9,7 +9,7 @@ import argparse
 import sys
 import time
 
-sys_path = "src/faceRec"
+sys_path = os.path.dirname(__file__)
 
 adaface_models = {
     'ir_50': os.path.join(sys_path, "pretrained/adaface_ir50_ms1mv2.ckpt"),
@@ -76,29 +76,29 @@ if __name__ == '__main__':
             face_encoding, _ = model(bgr_tensor_input)
             face_encodings.append(face_encoding)
         
-        if not face_encodings:
-            continue
-        
-        ## 2. 얼굴 유사도 측정 with tensor
-        # start_time = time.time() # 연산에 대한 실행 시간(start) check
-        face_encodings = torch.squeeze(torch.stack(face_encodings), dim=1).to(device) # torch.squeeze(torch.stack(face_encodings), dim=1) # torch.squeeze()
-        with torch.no_grad():
-            face_distances = torch.matmul(face_encodings, known_face_encodings.T)
-        best_match_index = torch.argmax(face_distances, dim=1)
-        thresh = opt.thresh
-        face_names = ["unknown" if torch.any(face_distances[i][idx] < thresh) else known_face_names[idx] for i, idx in enumerate(best_match_index)]
-        # face_names = [known_face_names[idx] for idx in best_match_index] # threshold 없는 경우 ('unkown' 처리 안한 경우)
-        # end_time = time.time() # 연산에 대한 실행 시간(end) check
-        # print("Execution Time:", (end_time - start_time), "sec") # 실행 시간 0.0003 ~
-        
-
-        ## 3. bbox 시각화
-        for (x1, y1, x2, y2, _), f_name in zip(bboxes, face_names):
-            cv2.rectangle(frame,(x1, y1), (x2, y2),(0, 0, 255), 1)
-            cv2.rectangle(frame, (x1, y2 - 30), (x2, y2), (0, 0, 255), cv2.FILLED)
+        # if not face_encodings:
+        #     continue
+        if len(face_encodings) > 0:
+            ## 2. 얼굴 유사도 측정 with tensor
+            # start_time = time.time() # 연산에 대한 실행 시간(start) check
+            face_encodings = torch.squeeze(torch.stack(face_encodings), dim=1).to(device) # torch.squeeze(torch.stack(face_encodings), dim=1) # torch.squeeze()
+            with torch.no_grad():
+                face_distances = torch.matmul(face_encodings, known_face_encodings.T)
+            best_match_index = torch.argmax(face_distances, dim=1)
+            thresh = opt.thresh
+            face_names = ["unknown" if torch.any(face_distances[i][idx] < thresh) else known_face_names[idx] for i, idx in enumerate(best_match_index)]
+            # face_names = [known_face_names[idx] for idx in best_match_index] # threshold 없는 경우 ('unkown' 처리 안한 경우)
+            # end_time = time.time() # 연산에 대한 실행 시간(end) check
+            # print("Execution Time:", (end_time - start_time), "sec") # 실행 시간 0.0003 ~
             
-            font = cv2.FONT_HERSHEY_DUPLEX
-            cv2.putText(frame, f_name, (x1 + 6, y2 - 6), font, .5, (0, 0, 0), 1)
+
+            ## 3. bbox 시각화
+            for (x1, y1, x2, y2, _), f_name in zip(bboxes, face_names):
+                cv2.rectangle(frame,(x1, y1), (x2, y2),(0, 0, 255), 1)
+                cv2.rectangle(frame, (x1, y2 - 30), (x2, y2), (0, 0, 255), cv2.FILLED)
+                
+                font = cv2.FONT_HERSHEY_DUPLEX
+                cv2.putText(frame, f_name, (x1 + 6, y2 - 6), font, .5, (0, 0, 0), 1)
 
         # Display the resulting image
         cv2.imshow('Video', frame)

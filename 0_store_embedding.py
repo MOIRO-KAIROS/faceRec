@@ -5,7 +5,7 @@ from face_alignment import align
 import numpy as np
 
 
-sys_path = "src/faceRec"
+sys_path = os.path.dirname(__file__)
 
 adaface_models = {
     'ir_50': os.path.join(sys_path, "pretrained/adaface_ir50_ms1mv2.ckpt"),
