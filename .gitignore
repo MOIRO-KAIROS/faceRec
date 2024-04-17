@@ -1,5 +1,6 @@
 face_dataset/test/minha.jpg
 face_dataset/test/yeonju.jpg
+face_dataset/test/jaeyeong.jpg
 video/*.mp4
 pretrained/
 # Byte-compiled / optimized / DLL files

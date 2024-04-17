@@ -11,6 +11,7 @@ import time
 
 sys_path = os.path.dirname(__file__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+torch.set_grad_enabled(False) # for 메모리
 
 adaface_models = {
     'ir_50': os.path.join(sys_path, "pretrained/adaface_ir50_ms1mv2.ckpt"),
@@ -47,6 +48,12 @@ def load_dataset():
         print("Error: Face database not found")
         sys.exit(1)
 
+model = load_pretrained_model('ir_50') # .to(device)
+print('face recongnition model loaded')
+
+# 데이터 로드
+known_face_encodings, known_face_names = load_dataset()
+
 def store_embedding(opt):
     # 모든 얼굴의 임베딩 계산
     model = load_pretrained_model(opt.fr_weight) # .to(device)
@@ -74,17 +81,39 @@ def store_embedding(opt):
     print(f"얼굴 임베딩 벡터 저장 완료(known face 개수: {len(ids)})")
     return features, ids
 
-def inference(opt):
-    model = load_pretrained_model(opt.fr_weight) # .to(device)
-    print('face recongnition model loaded')
-    torch.set_grad_enabled(False) # for 메모리
+def inference(opt, frame):
+    pil_im = Image.fromarray(frame).convert('RGB')
+    face_encodings = []
 
-    # 데이터 로드
-    known_face_encodings, known_face_names = load_dataset()
+    ## 1. 얼굴 feature 추출
+    aligned_rgb_img, bboxes = align.get_aligned_face_for_webcam('', pil_im, opt.max_obj)
+    bboxes = [[int(xy) for (xy) in bbox] for bbox in bboxes]
+    for img in aligned_rgb_img:
+        bgr_tensor_input = to_input(img)
+        face_encoding, _ = model(bgr_tensor_input)
+        face_encodings.append(face_encoding)
+    
+    # if not face_encodings:
+    #     continue
+    face_names = []
+    if len(face_encodings) > 0:
+        ## 2. 얼굴 유사도 측정 with tensor
+        # start_time = time.time() # 연산에 대한 실행 시간(start) check
+        face_encodings = torch.squeeze(torch.stack(face_encodings), dim=1).to(device) # torch.squeeze(torch.stack(face_encodings), dim=1) # torch.squeeze()
+        with torch.no_grad():
+            face_distances = torch.matmul(face_encodings, known_face_encodings.T)
+        best_match_index = torch.argmax(face_distances, dim=1)
+        thresh = opt.thresh
+        face_names = ["unknown" if torch.any(face_distances[i][idx] < thresh) else known_face_names[idx] for i, idx in enumerate(best_match_index)]
+        # face_names = [known_face_names[idx] for idx in best_match_index] # threshold 없는 경우 ('unkown' 처리 안한 경우)
+        # end_time = time.time() # 연산에 대한 실행 시간(end) check
+        # print("Execution Time:", (end_time - start_time), "sec") # 실행 시간 0.0003 ~
+    
+    return bboxes, face_names
 
+def run_video(opt):
     video_capture = cv2.VideoCapture(opt.video) # os.path.join(sys_path, "video/iAM.mp4"
     while True:
-        face_encodings = []
         # Grab a single frame of video
         ret, frame = video_capture.read()
         # height, width = frame.shape[:2]
@@ -93,40 +122,16 @@ def inference(opt):
             break
 
         frame = cv2.flip(frame, 1)
-        pil_im = Image.fromarray(frame).convert('RGB')
+        bboxes, face_names = inference(opt, frame)
 
-        ## 1. 얼굴 feature 추출
-        aligned_rgb_img, bboxes = align.get_aligned_face_for_webcam('', pil_im, opt.max_obj)
-        bboxes = [[int(xy) for (xy) in bbox] for bbox in bboxes]
-        for img in aligned_rgb_img:
-            bgr_tensor_input = to_input(img)
-            face_encoding, _ = model(bgr_tensor_input)
-            face_encodings.append(face_encoding)
-        
-        # if not face_encodings:
-        #     continue
-        if len(face_encodings) > 0:
-            ## 2. 얼굴 유사도 측정 with tensor
-            # start_time = time.time() # 연산에 대한 실행 시간(start) check
-            face_encodings = torch.squeeze(torch.stack(face_encodings), dim=1).to(device) # torch.squeeze(torch.stack(face_encodings), dim=1) # torch.squeeze()
-            with torch.no_grad():
-                face_distances = torch.matmul(face_encodings, known_face_encodings.T)
-            best_match_index = torch.argmax(face_distances, dim=1)
-            thresh = opt.thresh
-            face_names = ["unknown" if torch.any(face_distances[i][idx] < thresh) else known_face_names[idx] for i, idx in enumerate(best_match_index)]
-            # face_names = [known_face_names[idx] for idx in best_match_index] # threshold 없는 경우 ('unkown' 처리 안한 경우)
-            # end_time = time.time() # 연산에 대한 실행 시간(end) check
-            # print("Execution Time:", (end_time - start_time), "sec") # 실행 시간 0.0003 ~
-            
-
-            ## 3. bbox 시각화
+        ## 3. bbox 시각화
+        if (len(face_names) > 0):
             for (x1, y1, x2, y2, _), f_name in zip(bboxes, face_names):
                 cv2.rectangle(frame,(x1, y1), (x2, y2),(0, 0, 255), 1)
                 cv2.rectangle(frame, (x1, y2 - 30), (x2, y2), (0, 0, 255), cv2.FILLED)
                 
                 font = cv2.FONT_HERSHEY_DUPLEX
                 cv2.putText(frame, f_name, (x1 + 6, y2 - 6), font, .5, (0, 0, 0), 1)
-
         # Display the resulting image
         cv2.imshow('Video', frame)
 
@@ -138,3 +143,15 @@ def inference(opt):
     # Release handle to the webcam
     video_capture.release()
     cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', type=int, default=1, help='0: 임베딩 저장 1: webcam/video으로 run_video)')
+    parser.add_argument('--video', type=str, default='0', help='0: webcam 또는 "video/iAM.mp4" 특정 비디오 path 경로')
+    parser.add_argument('--fr_weight', type=str, default='ir_50', help='face recognition weight')
+    parser.add_argument('--thresh', nargs='+', type=str, default=.2, help='unknown confidence < .2')
+    parser.add_argument('--max_obj', type=int, default=6, help='detect 가능한 최대 얼굴의 개수')
+    parser.add_argument('--dataset', type=str, default='face_dataset/test', help='face dataset의 경로 (known face dataset)')
+    
+    opt = parser.parse_args()
